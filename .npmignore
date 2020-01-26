@@ -1,0 +1,7 @@
+src
+examples
+lib/*.test.*
+lib/common.*
+jest.config.js
+tsconfig.json
+.travis.yml
