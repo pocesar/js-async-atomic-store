@@ -1,7 +1,7 @@
-![NPM](https://img.shields.io/npm/l/async-atomic-store)
-![npm](https://img.shields.io/npm/v/async-atomic-store)
-![npm](https://img.shields.io/npm/types/async-atomic-store)
-![Travis (.org)](https://img.shields.io/travis/pocesar/js-async-atomic-store)
+[![NPM](https://img.shields.io/npm/l/async-atomic-store)](https://www.npmjs.com/package/async-atomic-store)
+[![npm](https://img.shields.io/npm/v/async-atomic-store)](https://www.npmjs.com/package/async-atomic-store)
+[![npm](https://img.shields.io/npm/types/async-atomic-store)](https://www.npmjs.com/package/async-atomic-store)
+[![Travis (.org)](https://img.shields.io/travis/pocesar/js-async-atomic-store)](https://travis-ci.org/pocesar/js-async-atomic-store)
 
 # async-atomic-store
 
