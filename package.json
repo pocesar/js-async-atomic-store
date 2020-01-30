@@ -1,6 +1,6 @@
 {
   "name": "async-atomic-store",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "An agnostic little store abstraction for reading, writing and appending on the same data from multiple sources in a locking manner, that allows concurrent/parallel (like from many async sources) write, append and read",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
