@@ -1,4 +1,4 @@
-import { AsyncAtomicStore } from './index'
+import { AsyncAtomicStore, AsyncObject, AsyncMap, AsyncArray } from './index'
 import { sleep } from './common'
 
 describe('AsyncAtomicStore', () => {
@@ -107,5 +107,102 @@ describe('AsyncAtomicStore', () => {
     const data = await store.data()
 
     expect(data.join('')).toEqual('0123')
+  })
+
+  test('lock', async () => {
+    let k = ''
+
+    const store = AsyncAtomicStore<number, string, string>({
+      data: async () => k,
+      read: async (index) => k.substr(index, 1),
+      write: async (index, value) => {
+        k = `${k.slice(0, index)}${value}${k.slice(index + 1)}`
+      }
+    })
+
+    store.write(0, 'a')
+    store.write(1, 'x')
+    const value = await store.lock(async (str) => {
+      return str + 'c'
+    })
+
+    await store.lock(async (str) => {
+      // "lock" do nothing to underlaying data state
+      // so the current value should be from the 2
+      // writes
+      expect(str + 'b').toEqual('axb')
+    })
+
+    expect(`${await store.data()}${value}`).toEqual('axaxc')
+  })
+
+  describe('adapters', () => {
+    test('AsyncMap', async () => {
+      const map: Map<string, number> = new Map<string, number>()
+
+      for (let passes = 0; passes < 2; passes++) {
+        const store = AsyncMap(passes === 0 ? map : undefined)
+
+        await store.write('1', 1)
+
+        if (passes === 0) {
+          expect(map.get('1')).toEqual(1)
+        }
+        expect(await store.read('2')).toEqual(undefined)
+
+        await store.append('1', async (num) => {
+          return num! + 1
+        })
+
+        if (passes === 0) {
+          expect(map.get('1')).toEqual(2)
+        }
+        expect((await store.data()).get('1')).toEqual(2)
+      }
+    })
+
+    test('AsyncArray', async () => {
+      const array: string[] = []
+
+      for (let passes = 0; passes < 2; passes++) {
+        const store = AsyncArray(passes === 0 ? array : undefined)
+
+        await store.lock(async (arr) => {
+          arr.push('1')
+        })
+
+        expect(await store.read(0)).toEqual('1')
+
+        if (passes === 0) {
+          expect(array).toEqual(['1'])
+        }
+
+        await store.write(1, '2')
+        if (passes === 0) {
+          expect(array).toEqual(['1', '2'])
+        }
+      }
+    })
+
+    test('AsyncObject', async () => {
+      const obj: { [index: string]: { deep: boolean } } = {}
+
+      for (let passes = 0; passes < 2; passes++) {
+        const store = AsyncObject(passes === 0 ? obj : undefined)
+
+        await store.write('two', { deep: true })
+        await store.append('one', async () => {
+          return {
+            deep: false,
+          }
+        })
+
+        if (passes === 0) {
+          expect(obj['one']).toEqual({ deep: false })
+        }
+        expect(await store.read('two')).toEqual({ deep: true })
+        expect((await store.data())['one']).toEqual({ deep: false })
+      }
+    })
   })
 })

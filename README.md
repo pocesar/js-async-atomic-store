@@ -2,6 +2,7 @@
 [![npm](https://img.shields.io/npm/v/async-atomic-store)](https://www.npmjs.com/package/async-atomic-store)
 [![npm](https://img.shields.io/npm/types/async-atomic-store)](https://www.npmjs.com/package/async-atomic-store)
 [![Travis (.org)](https://img.shields.io/travis/pocesar/js-async-atomic-store)](https://travis-ci.org/pocesar/js-async-atomic-store)
+[![Coverage Status](https://coveralls.io/repos/github/pocesar/js-async-atomic-store/badge.svg?branch=master)](https://coveralls.io/github/pocesar/js-async-atomic-store?branch=master)
 
 # async-atomic-store
 
@@ -9,11 +10,92 @@ An agnostic little store abstraction for reading, writing and appending on the s
 
 ## API
 
-The interface is simple, you provide your `read`, `write` and `data` methods, and it outputs an async-locking `write`, `read`, `append`, `data` methods.
+The interface is simple, you provide your `read`, `write` and `data` methods, and it outputs an async-locking `write`, `read`, `append`, `lock` and `data` methods.
 
-All those methods are async (return a promise), even if they have non-async data underneath, because of the async locking mechanism.
+All those methods are async (return a promise), even if they have non-async data underneath, because of the async locking mechanism, which is similar to a `LOCK TABLE` and not `LOCK ROW`. This does not use loops or saturate the event loop.
+
+If any method `throw`, the lock will be released and no changes are made.
+
+```ts
+const store = AsyncAtomicStore<KEY_OR_ID, TYPE_OR_SHAPE_OF_VALUE, TYPE_OF_STORAGE>({
+  data: async () => { /* your underlying data */ },
+  read: async (key) => { /* query a database, read from your datasource */ },
+  write: async (key, value) => { /* writes in a atomic locking manner */ }
+});
+
+// guaranteed to return that point-in-time value
+const value = await store.read("id");
+
+// at this exact point, "id" will be "my value"
+await store.write("id", "my value");
+
+// passes the current value to the callback, modify it then write at the same key.
+// transformedValue = "my value + my value"
+const transformedValue = await store.append("id", async (currentValue) => {
+  return `${currentValue} + ${currentValue}`;
+});
+
+// locks everything, passes the current point-in-time datasource, and return an arbitrary value.
+// This exists for everything that isn't covered by the other "keyed" methods, but you need to
+// do some async work before returning a value
+// value = "ok"
+const value = await store.lock(async (datasource) => {
+  datasource[42] = "the answer";
+  return "ok";
+});
+```
+
+Provides the following type-safe adapters for your data:
+
+### AsyncArray
+
+```ts
+import { AsyncArray } from 'async-atomic-store'
+
+const myArray = [];
+const store = AsyncArray(myArray);
+await store.write(0, "ok");
+await store.lock(async (arr) => {
+  arr.push("item"); // there's no other way to manipulate an array other than using lock()
+});
+
+myArray[0] === "ok";
+myArray[1] === "item";
+```
+
+### AsyncMap
+
+```ts
+import { AsyncMap } from 'async-atomic-store'
+
+const myMap = new Map<string, string>();
+const store = AsyncMap(myMap);
+await store.write("str", "ing");
+
+myMap.get("str") === "ing";
+```
+
+### AsyncObject
+
+```ts
+import { AsyncObject } from 'async-atomic-store'
+
+const myObj = Object.create(null);
+const store = AsyncObject(myObj);
+await store.lock(async (obj) => {
+  obj.goCrazy = {
+    with: {
+      it: true
+    }
+  }
+});
+
+myObj.goCrazy.with.it === true;
+```
 
 ## Examples
+
+Explicit implementations of different data sources
 
 Using `Map`
 
