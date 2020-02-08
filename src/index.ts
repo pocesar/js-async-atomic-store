@@ -44,7 +44,7 @@ export const AsyncAtomicStore = <KEY, VALUE, SOURCE>(
       await lock.acquireAsync()
 
       try {
-        return cb(await data())
+        return await cb(await data())
       } finally {
         lock.release()
       }
@@ -77,7 +77,7 @@ export const AsyncAtomicStore = <KEY, VALUE, SOURCE>(
       await lock.acquireAsync()
 
       try {
-        return data()
+        return await data()
       } finally {
         lock.release()
       }
